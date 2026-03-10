@@ -15,4 +15,4 @@ if [ -z "$API_URL" ]; then
   exit 1
 fi
 
-LC_ALL=C  find .next -type f -exec perl -pi -e "s|xyzPLACEHOLDERxyz|${API_URL}|g" {} +
+LC_ALL=C  find .next -type f -exec perl -pi -e "s|http://xyzPLACEHOLDERxyz|${API_URL}|g" {} +
