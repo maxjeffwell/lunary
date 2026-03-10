@@ -1,0 +1,58 @@
+# Lunary Frontend - Community Edition
+# Multi-stage Next.js standalone build with runtime API_URL injection
+
+# ---- Dependencies ----
+FROM node:20-slim AS deps
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY patches/ ./patches/
+COPY packages/frontend/package.json ./packages/frontend/
+COPY packages/shared/package.json ./packages/shared/
+
+RUN npm ci
+
+# ---- Build ----
+FROM node:20-slim AS build
+WORKDIR /app
+
+# All deps are hoisted to root node_modules in npm workspaces
+COPY --from=deps /app/node_modules ./node_modules
+
+COPY package.json package-lock.json tsconfig.json ./
+COPY patches/ ./patches/
+COPY packages/frontend/ ./packages/frontend/
+COPY packages/shared/ ./packages/shared/
+
+# Build with placeholder — real API_URL injected at runtime via load-env.sh
+ENV API_URL=http://xyzPLACEHOLDERxyz
+ENV NEXT_PUBLIC_API_URL=http://xyzPLACEHOLDERxyz
+RUN npm run build:frontend
+
+# ---- Production ----
+FROM node:20-slim AS production
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    perl \
+    findutils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy standalone server (includes only required node_modules)
+COPY --from=build /app/packages/frontend/.next/standalone ./
+# Copy static assets and public files (not included in standalone)
+COPY --from=build /app/packages/frontend/.next/static ./packages/frontend/.next/static
+COPY --from=build /app/packages/frontend/public ./packages/frontend/public
+# Copy load-env.sh for runtime API_URL injection
+COPY --from=build /app/packages/frontend/load-env.sh ./packages/frontend/
+RUN chmod +x ./packages/frontend/load-env.sh
+
+ENV NODE_ENV=production
+ENV PORT=8080
+ENV HOSTNAME=0.0.0.0
+
+EXPOSE 8080
+
+# Replace placeholder with real API_URL, then start standalone server
+CMD ["bash", "-c", "cd packages/frontend && ./load-env.sh && cd /app && node packages/frontend/server.js"]
