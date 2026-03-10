@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: lunary-backend
+  namespace: lunary
+  labels:
+    app: lunary-backend
+spec:
+  selector:
+    app: lunary-backend
+  ports:
+    - port: 3333
+      targetPort: http
+      name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lunary-frontend
+  namespace: lunary
+  labels:
+    app: lunary-frontend
+spec:
+  selector:
+    app: lunary-frontend
+  ports:
+    - port: 8080
+      targetPort: http
+      name: http

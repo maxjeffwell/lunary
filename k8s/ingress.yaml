@@ -1,0 +1,47 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lunary-frontend
+  namespace: lunary
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod-dns
+spec:
+  tls:
+    - hosts:
+        - lunary.el-jefe.me
+      secretName: lunary-frontend-tls
+  rules:
+    - host: lunary.el-jefe.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: lunary-frontend
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lunary-backend
+  namespace: lunary
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod-dns
+spec:
+  tls:
+    - hosts:
+        - lunary-api.el-jefe.me
+      secretName: lunary-backend-tls
+  rules:
+    - host: lunary-api.el-jefe.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: lunary-backend
+                port:
+                  number: 3333
