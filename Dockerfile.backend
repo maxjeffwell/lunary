@@ -1,0 +1,52 @@
+# Lunary Backend - Community Edition
+# Multi-stage build for production Node.js backend
+
+# ---- Dependencies ----
+FROM node:20-slim AS deps
+WORKDIR /app
+
+# Copy workspace config and package files
+COPY package.json package-lock.json ./
+COPY patches/ ./patches/
+COPY packages/backend/package.json ./packages/backend/
+COPY packages/shared/package.json ./packages/shared/
+
+# Install all dependencies (hoisted to root node_modules for workspaces)
+RUN npm ci
+
+# ---- Build ----
+FROM node:20-slim AS build
+WORKDIR /app
+
+# All deps are hoisted to root node_modules in npm workspaces
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy source
+COPY package.json package-lock.json tsconfig.json ./
+COPY patches/ ./patches/
+COPY packages/backend/ ./packages/backend/
+COPY packages/shared/ ./packages/shared/
+COPY packages/db/ ./packages/db/
+
+# ---- Production ----
+FROM node:20-slim AS production
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy everything needed at runtime
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/packages/backend/ ./packages/backend/
+COPY --from=build /app/packages/shared/ ./packages/shared/
+COPY --from=build /app/packages/db/ ./packages/db/
+COPY --from=build /app/package.json ./
+
+ENV NODE_ENV=production
+ENV PORT=3333
+
+EXPOSE 3333
+
+# Run migrations then start server
+CMD ["npm", "run", "start:backend"]
