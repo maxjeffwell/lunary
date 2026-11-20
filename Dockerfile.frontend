@@ -2,7 +2,7 @@
 # Multi-stage Next.js standalone build with runtime API_URL injection
 
 # ---- Dependencies ----
-FROM node:20-slim AS deps
+FROM node:24-slim AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -13,7 +13,7 @@ COPY packages/shared/package.json ./packages/shared/
 RUN npm ci
 
 # ---- Build ----
-FROM node:20-slim AS build
+FROM node:24-slim AS build
 WORKDIR /app
 
 # All deps are hoisted to root node_modules in npm workspaces
@@ -30,7 +30,7 @@ ENV NEXT_PUBLIC_API_URL=http://xyzPLACEHOLDERxyz
 RUN npm run build:frontend
 
 # ---- Production ----
-FROM node:20-slim AS production
+FROM node:24-slim AS production
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
