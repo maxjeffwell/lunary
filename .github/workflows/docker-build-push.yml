@@ -66,7 +66,11 @@ jobs:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
         run: |
           echo "dockerhub_username=$(doppler secrets get DOCKERHUB_USERNAME --plain)" >> $GITHUB_OUTPUT
-          echo "dockerhub_token=$(doppler secrets get DOCKERHUB_TOKEN --plain)" >> $GITHUB_OUTPUT
+          # Values read from Doppler at run time are not repository secrets, so
+          # GitHub prints them in the log unless they are registered with add-mask.
+          dockerhub_token_value=$(doppler secrets get DOCKERHUB_TOKEN --plain)
+          echo "::add-mask::$dockerhub_token_value"
+          echo "dockerhub_token=$dockerhub_token_value" >> $GITHUB_OUTPUT
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -102,7 +106,9 @@ jobs:
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
         run: |
-          echo "deploy_pat=$(doppler secrets get GH_PAT_WORKFLOW_TRIGGER --plain)" >> $GITHUB_OUTPUT
+          deploy_pat_value=$(doppler secrets get GH_PAT_WORKFLOW_TRIGGER --plain)
+          echo "::add-mask::$deploy_pat_value"
+          echo "deploy_pat=$deploy_pat_value" >> $GITHUB_OUTPUT
 
       - name: Trigger K8s deployment
         uses: peter-evans/repository-dispatch@v3
